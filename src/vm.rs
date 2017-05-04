@@ -6,6 +6,7 @@ struct VM {
 	variables: 		&'a mut BTreeMap<u32, u32>,
 	function_table: &'a mut Vec<usize>,
 	function_code: 	&'a mut Vec<u8>,
+	native_code:	&'a mut Vec<fn()->Void>,
 } 
 
 impl VM {
@@ -16,7 +17,13 @@ impl VM {
 			variables: BTreeMap::new(),
 			function_table: vec![0; 255],
 			function_code: Vec::new(),
+			native_code: Vec::new(),
 		}
+	}
+
+	fn add_native(&self, func: fn()->Void) {
+		//TODO: 
+		self.native_code.push(func);
 	}
 
 	fn run(&self, mut code: Vec<u8>) -> Vec<u32> {
@@ -24,6 +31,11 @@ impl VM {
 		// reverse code in place
 		code.reverse();
 		let stack = self.stack;
+		let alt_stack = self.alt_stack;
+		let variables = self.variables;
+		let function_table = self.function_table;
+		let function_code = self.function_code;
+		let native_code = self.function_code;
 		
 		while let Some(op) = code.pop() {
 			match op {
@@ -242,6 +254,10 @@ impl VM {
 					let z = stack.pop().unwrap();
 					let y = stack.pop().unwrap();
 					stack.push((z != 0u32 && y != 0u32) as u32);
+				}
+				// call native
+				36u8 => {
+					
 				}
 				_ => panic!("unknown op code {}", op),
 			} // match op
