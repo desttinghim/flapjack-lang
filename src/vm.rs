@@ -1,16 +1,7 @@
 use std::collections::BTreeMap;
 
-pub struct VM {
-	stack: 			Vec<u32>,
-	alt_stack: 		Vec<u32>,
-	variables: 		BTreeMap<u32, u32>,
-	function_table: Vec<u32>,
-	function_code: 	Vec<u8>,
-	//native_code:	&'a mut Vec<Fn(&mut VM)->()>,
-} 
-
-
-pub const PRINT: u8 = 0;
+// VM op codes
+pub const NATIVE: u8 = 0;
 pub const ADD: u8 	= 1;
 pub const MUL: u8	= 2;
 pub const SUB: u8	= 3;
@@ -47,22 +38,34 @@ pub const FETCHR: u8 = 33;
 pub const OR: u8	= 34;
 pub const AND: u8	= 35;
 
-impl VM {
-	pub fn new() -> VM {
+pub struct VM<'a> {
+	stack: 			Vec<u32>,
+	alt_stack: 		Vec<u32>,
+	nat_stack:		Vec<u32>,
+	variables: 		BTreeMap<u32, u32>,
+	function_table: Vec<u32>,
+	function_code: 	Vec<u8>,
+	native_code:	Vec<&'a Fn(&mut Vec<u32>)->()>,
+} 
+
+impl <'a> VM<'a> {
+	pub fn new() -> VM<'a> {
 		VM {
 			stack: Vec::with_capacity(32),
 			alt_stack: Vec::with_capacity(32),
+			nat_stack: Vec::with_capacity(32),
 			variables: BTreeMap::new(),
 			function_table: vec![0; 255],
 			function_code: Vec::new(),
-			//native_code: Vec::new(),
+			native_code: Vec::new(),
 		}
 	}
 
-	/*fn add_native(&self, func: Fn(&mut VM)->())->u32 {
-		// TODO: figure out how to add functions to a vector
+	pub fn add_native(&mut self, func: &'a Fn(&mut Vec<u32>)->())->u32 {
+		let xt = self.native_code.len() as u32;
 		self.native_code.push(func);
-	}*/
+		xt
+	}
 
 	pub fn run(&mut self, mut code: Vec<u8>) -> Vec<u32> {
 
@@ -77,11 +80,19 @@ impl VM {
 		
 		while let Some(op) = code.pop() {
 			match op as u8 {
-				//print
-				PRINT => {
-					//this will do nothing for now
-					//TODO: make it possible to send output to a callback
-					//stack.rev().take(3);
+				// native (calls a rust function)
+				NATIVE => {
+					let z = stack.pop().unwrap() as u32;
+					let b = stack.pop().unwrap() as u32;
+					let e = stack.pop().unwrap() as u32;
+					let d = stack.pop().unwrap() as u32;
+					let y = (d << 24) | (e << 16) | (b << 8) | z;
+					let f = self.native_code[y as usize];
+					let argc = stack.pop().unwrap() as u32;
+					for _ in 0..argc {
+						self.nat_stack.push(stack.pop().unwrap());
+					}
+					f(&mut self.nat_stack);
 				}
 				// +
 				ADD => {
@@ -293,12 +304,6 @@ impl VM {
 					let y = stack.pop().unwrap();
 					stack.push((z != 0u32 && y != 0u32) as u32);
 				}
-				// call native
-				/*36u8 => {
-					let value = stack.pop().unwrap();
-					let f = self.native_code[value];
-					f(self);
-				}*/
 				_ => panic!("unknown op code {}", op),
 			} // match op
 		}
