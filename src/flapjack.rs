@@ -1,4 +1,4 @@
-std::collections:BTreeMap;
+/*std::collections:BTreeMap;
 
 struct FlapJack {
 	vm: VM,
@@ -8,6 +8,12 @@ struct FlapJack {
 // Implemented as an "object" so it can stick around
 // and have callbacks executed
 
+enum FlapJack {
+	String(String),
+	Word(String),
+	Number(u32),
+}
+
 impl FlapJack {
 	fn new() -> FlapJack {
 		FlapJack {
@@ -16,7 +22,7 @@ impl FlapJack {
 		}
 	}
 
-	fn add_fn(&self, name: String, func: fn()->Void) {
+	fn add_fn(&self, name: String, func: Fn(&mut VM)->()) {
 		// in: function name, function
 		// out: n/a
 		// side: new vm native_code xt, new entry in dict
@@ -24,20 +30,24 @@ impl FlapJack {
 		self.dict.insert(name, xt);
 	}
 
-	fn execute(&self, code) {
+	fn execute(&self, code: &str) {
 		// in: script text to run
 		// out: n/a
 		// TODO: parse into tokens and compile
-		vm.run(compile(parse)); // something like this
+		vm.run(compile(parse(code))); // something like this
 	}
 
-	fn parse(code) {
+	fn parse(code: &str)-> {
 		// in: code in text format
 		// out: list of tokens
+		let tokens = vec![0; 255]
+		for c in code.chars() {
+			// amazing things
+		}
 	}
 
 	fn compile(tokens) {
 		// in: list of tokens
 		// out: byte code
 	}
-}
+}*/

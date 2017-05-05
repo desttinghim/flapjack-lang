@@ -1,2 +1,2 @@
-mod vm;
-mod flapjack;
+pub mod vm;
+pub mod flapjack;

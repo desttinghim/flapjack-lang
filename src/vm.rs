@@ -1,41 +1,41 @@
 use std::collections::BTreeMap;
 
-struct VM {
-	stack: 			&'a mut Vec<u32>,
-	alt_stack: 		&'a mut Vec<u32>,
-	variables: 		&'a mut BTreeMap<u32, u32>,
-	function_table: &'a mut Vec<usize>,
-	function_code: 	&'a mut Vec<u8>,
-	native_code:	&'a mut Vec<fn()->Void>,
+pub struct VM {
+	stack: 			Vec<u32>,
+	alt_stack: 		Vec<u32>,
+	variables: 		BTreeMap<u32, u32>,
+	function_table: Vec<u32>,
+	function_code: 	Vec<u8>,
+	//native_code:	&'a mut Vec<Fn(&mut VM)->()>,
 } 
 
 impl VM {
-	fn new() {
+	pub fn new() -> VM {
 		VM {
 			stack: Vec::with_capacity(32),
 			alt_stack: Vec::with_capacity(32),
 			variables: BTreeMap::new(),
 			function_table: vec![0; 255],
 			function_code: Vec::new(),
-			native_code: Vec::new(),
+			//native_code: Vec::new(),
 		}
 	}
 
-	fn add_native(&self, func: fn()->Void) {
-		//TODO: 
+	/*fn add_native(&self, func: Fn(&mut VM)->())->u32 {
+		// TODO: figure out how to add functions to a vector
 		self.native_code.push(func);
-	}
+	}*/
 
-	fn run(&self, mut code: Vec<u8>) -> Vec<u32> {
+	pub fn run(&mut self, mut code: Vec<u8>) -> Vec<u32> {
 
 		// reverse code in place
 		code.reverse();
-		let stack = self.stack;
-		let alt_stack = self.alt_stack;
-		let variables = self.variables;
-		let function_table = self.function_table;
-		let function_code = self.function_code;
-		let native_code = self.function_code;
+		let stack = &mut self.stack;
+		let alt_stack = &mut self.alt_stack;
+		let variables = &mut self.variables;
+		let function_table = &mut self.function_table;
+		let function_code = &mut self.function_code;
+		//let native_code = self.function_code;
 		
 		while let Some(op) = code.pop() {
 			match op {
@@ -43,7 +43,7 @@ impl VM {
 				0u8 => {
 					//this will do nothing for now
 					//TODO: make it possible to send output to a callback
-					stack.rev().take(3);
+					//stack.rev().take(3);
 				}
 				// +
 				1u8 => {
@@ -153,13 +153,13 @@ impl VM {
 					let name = code.pop().unwrap();
 					function_code.push(17u8);
 					loop {
-						match code.pop.except("unterminated function") {
+						match code.pop().expect("unterminated function") {
 							17u8 => break,
 							18u8 => function_code.push(name),
 							op => function_code.push(op)
 						}
 					}
-					function_table[name as usize] = function_code.len();
+					function_table[name as usize] = function_code.len() as u32;
 				}
 				17u8|18u8 => unreachable!(),
 				// call
@@ -167,7 +167,7 @@ impl VM {
 					let name = stack.pop().unwrap();
 					let function_start = function_table[name as usize];
 					assert!(function_start != 0, "attempted to call undefined function");
-					for &byte in function_code[..function_start].iter.rev() {
+					for &byte in function_code[..function_start as usize].iter().rev() {
 						match byte {
 							17u8 => break,
 							_ => code.push(byte),
@@ -217,26 +217,26 @@ impl VM {
 				28u8 => {
 					let y = stack.pop().unwrap();
 					let z = stack.pop().unwrap();
-					stack.push((z == y) as u 32);
+					stack.push((z == y) as u32);
 				}
 				// >
 				29u8 => {
 					let y = stack.pop().unwrap();
 					let z = stack.pop().unwrap();
-					stack.push((z > y) as u 32);
+					stack.push((z > y) as u32);
 				}
 				// <
 				30u8 => {
 					let y = stack.pop().unwrap();
 					let z = stack.pop().unwrap();
-					stack.push((z < y) as u 32);
+					stack.push((z < y) as u32);
 				}
 				// drop
 				31u8 => {
 	 				stack.pop().unwrap();
 				}
 				// stop
-				32u8 => break;
+				32u8 => break,
 				// r@
 				33u8 => {
 					let z = alt_stack.pop().unwrap();
@@ -256,12 +256,14 @@ impl VM {
 					stack.push((z != 0u32 && y != 0u32) as u32);
 				}
 				// call native
-				36u8 => {
-					
-				}
+				/*36u8 => {
+					let value = stack.pop().unwrap();
+					let f = self.native_code[value];
+					f(self);
+				}*/
 				_ => panic!("unknown op code {}", op),
 			} // match op
 		}
-		stack
+		stack.to_vec()
 	} // run()
 }
