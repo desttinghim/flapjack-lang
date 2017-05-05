@@ -42,7 +42,7 @@ const EQ: u8	= 28;
 const GT: u8	= 29;
 const LT: u8	= 30;
 const DROP: u8	= 31;
-const FINISH: u8 = 32;
+const STOP: u8 = 32;
 const FETCHR: u8 = 33;
 const OR: u8	= 34;
 const AND: u8	= 35;
@@ -78,78 +78,78 @@ impl VM {
 		while let Some(op) = code.pop() {
 			match op as u8 {
 				//print
-				0u8 => {
+				PRINT => {
 					//this will do nothing for now
 					//TODO: make it possible to send output to a callback
 					//stack.rev().take(3);
 				}
 				// +
-				1u8 => {
+				ADD => {
 					let b = stack.pop().unwrap();
 					let d = stack.pop().unwrap();
 					stack.push(b + d);
 				}
 				// *
-				2u8 => {
+				MUL => {
 					let b = stack.pop().unwrap();
 					let d = stack.pop().unwrap();
 					stack.push(b * d);
 				}
 				// -
-				3u8 => {
+				SUB => {
 					let b = stack.pop().unwrap();
 					let d = stack.pop().unwrap();
 					stack.push(d - b);
 				}
 				// /
-				4u8 => {
+				DIV => {
 					let b = stack.pop().unwrap();
 					let d = stack.pop().unwrap();
 					stack.push(b / d);
 				}
 				// %
-				5u8 => {
+				MOD => {
 					let b = stack.pop().unwrap();
 					let d = stack.pop().unwrap();
 					stack.push(d % b);
 				}
 				// >r
-				6u8 => {
+				PUSHR => {
 					let b = stack.pop().unwrap();
 					alt_stack.push(b);
 				}
 				// r>
-				7u8 => {
+				POPR=> {
 					let b = alt_stack.pop().unwrap();
 					stack.push(b);
 				}
 				// ! (store value in variable)
-				8u8 => {
+				STORE => {
 					let name = stack.pop().unwrap();
 					let value = stack.pop().unwrap();
 					variables.insert(name, value);
 				}
 				// @ (fetch value in variable)
-				9u8 => {
+				FETCH => {
 					let name = stack.pop().unwrap();
 					let value = *variables.get(&name).unwrap_or(&0);
 					stack.push(value);
 				}
 				// dup
-				10u8 => {
+				DUP => {
 					let ab = stack.pop().unwrap();
 					stack.push(ab);
 					stack.push(ab);
 				}
 				// swap
-				11u8 => {
+				SWAP => {
 					let a = stack.pop().unwrap();
 					let b = stack.pop().unwrap();
 					stack.push(a);
 					stack.push(b);
 				}
 				// rot
-				12u8 => {
+				ROT => {
 					let a = stack.pop().unwrap();
 					let b = stack.pop().unwrap();
 					let c = stack.pop().unwrap();
@@ -158,7 +158,7 @@ impl VM {
 					stack.push(a);
 				}
 				// tuck
-				13u8 => {
+				TUCK => {
 					let a = stack.pop().unwrap();
 					let b = stack.pop().unwrap();
 					let c = stack.pop().unwrap();
@@ -167,7 +167,7 @@ impl VM {
 					stack.push(b);
 				}
 				// 2dup
-				14u8 => {
+				DUP2 => {
 					let a = stack.pop().unwrap();
 					let b = stack.pop().unwrap();
 					stack.push(b);
@@ -176,7 +176,7 @@ impl VM {
 					stack.push(a);
 				}
 				// 2swap
-				15u8 => {
+				SWAP2 => {
 					let a = stack.pop().unwrap();
 					let b = stack.pop().unwrap();
 					let a2 = stack.pop().unwrap();
@@ -187,7 +187,7 @@ impl VM {
 					stack.push(a2);
 				}
 				// : (define a word)
-				16u8 => {
+				STARTDEF => {
 					let name = code.pop().unwrap();
 					function_code.push(17u8);
 					loop {
@@ -199,9 +199,9 @@ impl VM {
 					}
 					function_table[name as usize] = function_code.len() as u32;
 				}
-				17u8|18u8 => unreachable!(),
+				ENDDEF|RECURSE => unreachable!(),
 				// call
-				19u8 => {
+				CALL => {
 					let name = stack.pop().unwrap();
 					let function_start = function_table[name as usize];
 					assert!(function_start != 0, "attempted to call undefined function");
@@ -213,7 +213,7 @@ impl VM {
 					}
 				}
 				// push
-				20u8 => {
+				PUSH => {
 					let b = stack.pop().unwrap();
 					for _ in 0..b {
 						let d = code.pop().unwrap();
@@ -221,12 +221,12 @@ impl VM {
 					}
 				}
 				// pushn
-				21u8 => {
+				PUSHN => {
 					let y = code.pop().unwrap();
 					stack.push(y as u32);
 				}
 				// push1..3
-				22u8|23u8|24u8 => {
+				PUSH1|PUSH2|PUSH3 => {
 					let count = op - 21;
 					for _ in 0..count {
 						let z = code.pop().unwrap() as u32;
@@ -238,7 +238,7 @@ impl VM {
 					}
 				}
 				// if
-				25u8 => {
+				IF => {
 					let y = stack.pop().unwrap();
 					if y == 0 {
 						//skip to else
@@ -246,49 +246,49 @@ impl VM {
 					}
 				}
 				// skip over else
-				26u8 => {
+				ELSE => {
 					while code.pop().unwrap() != 27 { }
 				}
 				// endif
-				27u8 => {}
+				THEN => {}
 				// ==
-				28u8 => {
+				EQ => {
 					let y = stack.pop().unwrap();
 					let z = stack.pop().unwrap();
 					stack.push((z == y) as u32);
 				}
 				// >
-				29u8 => {
+				GT => {
 					let y = stack.pop().unwrap();
 					let z = stack.pop().unwrap();
 					stack.push((z > y) as u32);
 				}
 				// <
-				30u8 => {
+				LT => {
 					let y = stack.pop().unwrap();
 					let z = stack.pop().unwrap();
 					stack.push((z < y) as u32);
 				}
 				// drop
-				31u8 => {
+				DROP => {
 	 				stack.pop().unwrap();
 				}
 				// stop
-				32u8 => break,
+				STOP => break,
 				// r@
-				33u8 => {
+				FETCHR => {
 					let z = alt_stack.pop().unwrap();
 					stack.push(z);
 					alt_stack.push(z);
 				}
 				// or
-				34u8 => {
+				OR => {
 					let z = stack.pop().unwrap();
 					let y = stack.pop().unwrap();
 					stack.push((z != 0u32 || y != 0u32) as u32);
 				}
 				// and
-				35u8 => {
+				AND => {
 					let z = stack.pop().unwrap();
 					let y = stack.pop().unwrap();
 					stack.push((z != 0u32 && y != 0u32) as u32);
