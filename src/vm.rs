@@ -9,6 +9,44 @@ pub struct VM {
 	//native_code:	&'a mut Vec<Fn(&mut VM)->()>,
 } 
 
+
+const PRINT: u8 = 0;
+const ADD: u8 	= 1;
+const MUL: u8	= 2;
+const SUB: u8	= 3;
+const DIV: u8 	= 4;
+const MOD: u8	= 5;
+const PUSHR: u8	= 6;
+const POPR: u8	= 7;
+const STORE: u8	= 8;
+const FETCH: u8	= 9;
+const DUP: u8	= 10;
+const SWAP: u8	= 11;
+const ROT: u8	= 12;
+const TUCK: u8 	= 13;
+const DUP2: u8	= 14;
+const SWAP2: u8	= 15;
+const STARTDEF: u8 = 16;
+const ENDDEF: u8 = 17;
+const RECURSE: u8 = 18;
+const CALL: u8	= 19;
+const PUSH: u8	= 20;
+const PUSHN: u8 = 21;
+const PUSH1: u8 = 22;
+const PUSH2: u8 = 23;
+const PUSH3: u8 = 24;
+const IF: u8	= 25;
+const ELSE: u8	= 26;
+const THEN: u8	= 27;
+const EQ: u8	= 28;
+const GT: u8	= 29;
+const LT: u8	= 30;
+const DROP: u8	= 31;
+const FINISH: u8 = 32;
+const FETCHR: u8 = 33;
+const OR: u8	= 34;
+const AND: u8	= 35;
+
 impl VM {
 	pub fn new() -> VM {
 		VM {
@@ -38,7 +76,7 @@ impl VM {
 		//let native_code = self.function_code;
 		
 		while let Some(op) = code.pop() {
-			match op {
+			match op as u8 {
 				//print
 				0u8 => {
 					//this will do nothing for now
@@ -154,8 +192,8 @@ impl VM {
 					function_code.push(17u8);
 					loop {
 						match code.pop().expect("unterminated function") {
-							17u8 => break,
-							18u8 => function_code.push(name),
+							ENDDEF => break,
+							RECURSE => function_code.push(name),
 							op => function_code.push(op)
 						}
 					}
@@ -169,7 +207,7 @@ impl VM {
 					assert!(function_start != 0, "attempted to call undefined function");
 					for &byte in function_code[..function_start as usize].iter().rev() {
 						match byte {
-							17u8 => break,
+							ENDDEF => break,
 							_ => code.push(byte),
 						}
 					}
